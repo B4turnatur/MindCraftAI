@@ -39,7 +39,7 @@
 
 ## Miku-Persönlichkeit ändern
 **Wofür:** Charakter, Sprache, Länge der Antworten, KI-Modell.
-**So geht's:** In `mindcraft/profiles/miku.json` → `conversing` (Text) bzw. `model` (`claude-cli/sonnet` = schlau, `claude-cli/haiku` = schneller, `claude-cli/opus` = am schlausten aber langsam; mit API-Key alternativ `claude-sonnet-5-5`). Mit Denk-Stufe als Objekt: `{"api":"claude-cli","model":"sonnet","params":{"effort":"high"}}` (low/medium/high). **Aktuell:** `claude-cli/haiku` (spart Limit). Für eine andere Figur: Datei kopieren, `name` ändern und in `companion.json` → `profile` eintragen (Schritt für Schritt: `AGENT_SETUP.md`).
+**So geht's:** In `mindcraft/profiles/miku.json` → `conversing` (Text) bzw. `model` (`claude-cli/sonnet` = schlau, `claude-cli/haiku` = schneller, `claude-cli/opus` = am schlausten aber langsam; mit API-Key alternativ `claude-sonnet-5-5`). Mit Denk-Stufe als Objekt: `{"api":"claude-cli","model":"sonnet","params":{"effort":"high"}}` (low/medium/high). **Aktuell:** `{"api":"claude-cli","model":"haiku","params":{"effort":"high"}}` (Embedding/Vision weiter Google). Für eine andere Figur: Datei kopieren, `name` ändern und in `companion.json` → `profile` eintragen (Schritt für Schritt: `AGENT_SETUP.md`).
 
 ## Eigener Charakter & GitHub
 **Wofür:** Einen anderen Charakter als Miku einbauen bzw. das Projekt mit Freunden teilen.
@@ -501,3 +501,16 @@ Oben in `life.js`: `WORLD_REACT_COOLDOWN_MS` (4 min), `WORLD_REACT_CHANCE` (0.6)
 **Beispiel:** Du hebst ihren fallen gelassenen Diamanten auf → Erlebnis „Steve hat mein diamond genommen … NICHT gegeben“ → Antwort z. B. `<thought>Drittes Mal heute.</thought> Ey, lass meine Diamanten liegen! !punch("Steve", 2)` → du hörst nur „Ey, lass meine Diamanten liegen!“.
 **Typische Fehler:** kaputte Datei → wird zu `inner_life.broken-<zeit>.json` umbenannt, Innenleben startet neu; Gedanken kommen nicht an → F-047; `You don't know X - you never attack strangers…` → gewollt (Fremden-Sperre).
 **Im Code:** `src/agent/inner_life.js`, `src/agent/life.js` (`createDropTracker`, `createPlacedTracker`), `src/agent/agent.js` (`splitThought` nach `promptConvo`), `src/agent/commands/actions.js` (`mayAttackPlayer`), Prompts `reflecting`/`conversing` in `profiles/miku.json`.
+
+## Echtes Sehen (Miku schaut wirklich hin)
+**Wofür:** Miku macht selbst Screenshots aus ihrer Sicht und lässt sie von Gemini beschreiben – ohne dass du Befehle tippst.
+**Voraussetzungen:** `allow_vision: true` in `mindcraft/settings.js`, `"vision_model": "google/gemini-3.1-flash-lite"` im Profil, `GEMINI_API_KEY` in `mindcraft/keys.json`. Ohne Key: alles still aus, kein Absturz.
+**So geht's:**
+1. **Auf Zuruf:** Sag/schreib z. B. „schau mal“, „guck mal hier“, „wie findest du mein Haus?“, „was ist das?“, „look at this“. Sie schaut auf den Block, den du anschaust, und antwortet dazu (~1–2 s länger).
+2. **Von selbst:** Alle ~2 min (früher an einem neuen Ort nicht, Mindestabstand ebenfalls 2 min) schaut sie sich um; Auffälliges merkt sie sich und kommentiert es manchmal.
+3. **Deine Bauten:** Setzt du ≥ 30 Blöcke in ihrer Nähe und hörst ~45 s auf, schaut sie es an und sagt ihre ehrliche Meinung (merkt es sich als wichtiges Erlebnis).
+4. **Eigene Bauten:** Nach `!buildTemplate` oder `!newAction` mit ≥ 15 Blöcken tritt sie zurück, schaut drauf und bessert ggf. nach.
+**Einstellen:** Konstanten oben in `mindcraft/src/agent/life.js` (`LOOK_AROUND_EVERY_MS`, `LOOK_AROUND_MOVED`, `BUILD_MIN_BLOCKS`, `BUILD_DONE_AFTER_MS`, `BUILD_MAX_LOOK_DIST`), Zuruf-Wörter: `LOOK_REQUEST` in `agent.js`, Kontroll-Schwelle `MIN_BUILD_REVIEW` in `vision_interpreter.js`.
+**Testen:** `cd mindcraft` → `node --test test/vision.test.mjs` → alles ✔.
+**Typische Fehler:** Kamera-Fehler/`window is not defined` → F-010.
+**Im Code:** `vision_interpreter.js` → `see()`, `aimLikePlayer()`, `reviewOwnBuild()`; `life.js` → `createBuildWatcher()` + Umschau-Timer; `agent.js` → `LOOK_REQUEST`.

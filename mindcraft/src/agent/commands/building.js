@@ -31,7 +31,12 @@ export const buildingActions = [
             'material': { type: 'BlockName', description: 'Main block, e.g. "oak_planks", "cobblestone", "stone_bricks".' }
         },
         perform: runAsAction('buildTemplate', async (agent, name, material) => {
+            const start = Date.now();
             await skills.buildTemplate(agent.bot, name, material, anchorPlayer(agent));
+            if (agent.bot.interrupt_code) return;
+            // Echtes Sehen: fertigen Bau einmal anschauen, Ergebnis landet in der Befehlsausgabe -> sie kann nachbessern
+            const review = await agent.vision_interpreter?.reviewOwnBuild(start, `a ${name} out of ${material}`);
+            if (review) skills.log(agent.bot, review);
         }, false, 15)
     },
     {

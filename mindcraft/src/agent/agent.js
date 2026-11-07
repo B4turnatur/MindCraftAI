@@ -1,6 +1,9 @@
 import { History } from './history.js';
 import { Coder } from './coder.js';
 import { VisionInterpreter } from './vision/vision_interpreter.js';
+
+// Sätze, bei denen Miku automatisch hinschaut (DE/EN)
+export const LOOK_REQUEST = /\b(schau|guck|sieh|siehst|seht|zeig|look|see (this|that|it|here|my|what)|check (this|that|it) out|wie findest du|was ist das|was ist hier|what('?s| is) (this|that)|how do you like|what do you think of)/i;
 import { Prompter } from '../models/prompter.js';
 import { initModes } from './modes.js';
 import { initBot } from '../utils/mcdata.js';
@@ -329,6 +332,14 @@ export class Agent {
         // Handle other user messages
         await this.history.add(source, message);
         this.history.save();
+
+        // Echtes Sehen auf Zuruf: "schau mal", "wie findest du ...", "was ist das" -> erst hinsehen, dann antworten
+        if (!self_prompt && !from_other_bot && LOOK_REQUEST.test(message) && this.bot.players[source]?.entity) {
+            const seen = await this.vision_interpreter?.see(`Your friend ${source} just said: "${message}". You turned to look at what they are looking at. `
+                + 'Describe what is relevant to what they said (if they ask your opinion, include an honest first impression).',
+                b => this.vision_interpreter.aimLikePlayer(b, source));
+            if (seen) await this.history.add('system', `[SEEN] You looked where ${source} is looking and saw: ${seen}`);
+        }
 
         if (!self_prompt && this.self_prompter.isActive()) // message is from user during self-prompting
             max_responses = 1; // force only respond to this message, then let self-prompting take over

@@ -61,7 +61,10 @@ export const actionsList = [
                     result = 'Error generating code: ' + e.toString();
                 }
             };
+            const start = Date.now();
             await agent.actions.runAction('action:newAction', actionFn, {timeout: settings.code_timeout_mins});
+            // Echtes Sehen: hat der Code viel gebaut, einmal hinschauen (nur ab genug Blöcken, sonst '')
+            result += await agent.vision_interpreter?.reviewOwnBuild(start, 'something with your own code') || '';
             return result;
         }
     },

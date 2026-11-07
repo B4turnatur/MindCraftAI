@@ -1,3 +1,4 @@
+import { Vec3 } from 'vec3';
 // Macht Miku lebendiger & menschlicher:
 // - Meldet Schläge, Klauen, Kaputtmachen nur als Fakten - wie sie reagiert, entscheidet Miku selbst (Innenleben, inner_life.js)
 // - Beschützt den Freund automatisch, wenn er von Monstern angegriffen wird
@@ -81,6 +82,35 @@ const WORLD_REACT_CHANCE = 0.6;           // nicht auf JEDEN Regen/Sonnenunterga
 const FRIEND_LOW_HP = 6;                  // Freund-Leben (von 20), ab dem sie besorgt reagiert
 const FRIEND_AFK_COMMENT_MS = 5 * 60e3;   // Freund steht so lange still -> einmal kommentieren (idle_fidget setzt bot.friend_afk_since)
 const EMOTE_COOLDOWN_MS = 4000;           // Körpersprache (hüpfen, nicken, zu Boden schauen) nicht öfter als alle 4 s
+
+// Echtes Sehen
+const LOOK_AROUND_EVERY_MS = 2 * 60e3;   // von selbst umschauen alle 2 min …
+const LOOK_AROUND_MOVED = 48;            // … oder früher, wenn sie so weit an einen neuen Ort gekommen ist
+const LOOK_AROUND_MIN_GAP_MS = 2 * 60e3; // aber nie öfter als alle 2 min (Kosten)
+const BUILD_MIN_BLOCKS = 30;             // ab so vielen gesetzten Blöcken gilt es als "Bau" des Spielers
+const BUILD_DONE_AFTER_MS = 45e3;        // so lange nichts mehr gesetzt -> Bau gilt als fertig
+const BUILD_MAX_LOOK_DIST = 28;          // nur anschauen, wenn sie nah genug dran ist
+
+// Merkt sich gesetzte Blöcke pro Spieler; finished() liefert fertige Bauten (genug Blöcke, eine Weile Ruhe) und vergisst sie.
+export function createBuildWatcher(minBlocks = BUILD_MIN_BLOCKS, doneAfter = BUILD_DONE_AFTER_MS) {
+    const builds = {}; // name -> { n, x, y, z (Summen), last }
+    return {
+        add(name, pos, now = Date.now()) {
+            const b = builds[name] ||= { n: 0, x: 0, y: 0, z: 0, last: now };
+            if (now - b.last > 3 * doneAfter) Object.assign(b, { n: 0, x: 0, y: 0, z: 0 }); // alter Rest verfällt
+            b.n++; b.x += pos.x; b.y += pos.y; b.z += pos.z; b.last = now;
+        },
+        finished(now = Date.now()) {
+            const out = [];
+            for (const [name, b] of Object.entries(builds)) {
+                if (now - b.last < doneAfter) continue;
+                if (b.n >= minBlocks) out.push({ name, blocks: b.n, center: { x: b.x / b.n, y: b.y / b.n, z: b.z / b.n } });
+                delete builds[name];
+            }
+            return out;
+        },
+    };
+}
 
 const randIdle = () => IDLE_MIN_MS + Math.random() * (IDLE_MAX_MS - IDLE_MIN_MS);
 
@@ -403,10 +433,17 @@ export function startLife(agent) {
 
     // Kaputtmachen: Spieler baut einen Block ab, den Miku selbst gesetzt hat
     const placed = createPlacedTracker();
+    let lastOwnPlace = 0;
     const origPlace = bot.placeBlock?.bind(bot);
     if (origPlace) bot.placeBlock = async (ref, face, ...rest) => {
+        lastOwnPlace = Date.now();
         const r = await origPlace(ref, face, ...rest);
-        try { placed.markPlaced(ref.position.plus(face)); } catch {}
+        try {
+            const pos = ref.position.plus(face);
+            placed.markPlaced(pos);
+            (bot.placedLog ||= []).push({ pos, t: Date.now() });
+            if (bot.placedLog.length > 500) bot.placedLog.splice(0, 100);
+        } catch {}
         return r;
     };
     // Eigenes Abbauen merken (targetDigBlock ist beim blockUpdate schon null)
@@ -433,6 +470,52 @@ export function startLife(agent) {
         if (Date.now() - lastDamageEvent < DAMAGE_EVENT_COOLDOWN_MS) return;
         lastDamageEvent = Date.now();
         event(`${who} just broke a block that YOU had placed (${oldB.name}).`);
+    });
+
+    // ---- Echtes Sehen ----
+    const vision = () => agent.vision_interpreter;
+    const canLook = () => !agent.shut_up && !busyNow() && !agent.thinking && vision()?.camera;
+
+    // Von selbst umschauen: alle paar Minuten oder an einem neuen Ort; Auffälliges -> Erlebnis + evtl. Kommentar
+    let lastLook = Date.now(), lastLookPos = null;
+    every(30e3, async () => {
+        if (!canLook()) return;
+        const pos = bot.entity.position;
+        const moved = lastLookPos ? pos.distanceTo(lastLookPos) : 0;
+        const since = Date.now() - lastLook;
+        if (since < LOOK_AROUND_MIN_GAP_MS || (since < LOOK_AROUND_EVERY_MS && moved < LOOK_AROUND_MOVED)) return;
+        lastLook = Date.now(); lastLookPos = pos.clone();
+        const seen = await vision().see('You glance around. Is there anything noteworthy here - a nice view, a structure, a cave, a village, '
+            + 'interesting animals, danger, something someone built? Answer in ONE short sentence. If nothing is special, answer exactly: BORING',
+            b => b.look(b.entity.yaw + (Math.random() - 0.5) * 2.5, -0.15, false));
+        if (!seen || /^\W*BORING/i.test(seen)) return;
+        worldReact(`I looked around and noticed: ${seen.split(/(?<=[.!?])\s/)[0]} Comment on it only if it is really worth it.`);
+    });
+
+    // Bauten des Freundes: Blöcke, die ein Spieler gerade gesetzt hat (Arm geschwungen, nah dran), sammeln
+    const buildWatch = createBuildWatcher();
+    bot.on('blockUpdate', (oldB, newB) => {
+        if (!oldB || !newB || !bot.entity || newB.name === 'air' || !['air', 'cave_air', 'water'].includes(oldB.name)) return;
+        if (Date.now() - lastOwnPlace < 1500 && newB.position.distanceTo(bot.entity.position) < 7) return; // war sie selbst
+        const now = Date.now();
+        for (const p of Object.values(bot.players)) {
+            if (!p.entity || p.username === bot.username || now - (swings[p.username] || 0) > 1000) continue;
+            if (p.entity.position.distanceTo(newB.position) > 6) continue;
+            buildWatch.add(p.username, newB.position, now);
+            break;
+        }
+    });
+    every(15e3, async () => {
+        for (const b of buildWatch.finished()) {
+            const c = new Vec3(b.center.x, b.center.y, b.center.z);
+            if (!canLook() || c.distanceTo(bot.entity.position) > BUILD_MAX_LOOK_DIST) continue; // verpasst -> nicht nachtragen
+            const seen = await vision().see(`Your friend ${b.name} just built something here (about ${b.blocks} blocks, you are looking at its center). `
+                + 'What is it, and what do you honestly think of it (style, size, materials, flaws)?', bb => bb.lookAt(c));
+            if (!seen) continue;
+            exp(`${b.name} hat etwas gebaut (ca. ${b.blocks} Blöcke bei x:${Math.round(c.x)} z:${Math.round(c.z)}) - ich hab es mir angesehen: ${seen}`, true);
+            event(`${b.name} just finished building something (about ${b.blocks} blocks). You looked at it and saw: ${seen} `
+                + 'Tell them your honest opinion in one or two short spoken lines like a friend (praise what is good, tease what is odd). No command.', true);
+        }
     });
 
     // Begrüßt den Freund, wenn er (wieder) den Server betritt - "willkommen zurück" statt Stille

@@ -160,3 +160,15 @@ man per `!setMode` zurückschalten kann.
 **Gewählt:** Ein Repo (`B4turnatur/MindCraftAI`, öffentlich) mit allem drin (Mindcraft-Fork als normale Dateien, Voice, Server-Skripte, Doku). Persönliches in `companion.json` (gitignored, Vorlage `companion.example.json`), Charakter = Profil-Datei, Miku bleibt Beispiel. Einrichtung über `AGENT_SETUP.md`, die ein KI-Agent abarbeitet.
 **Alternativen:** Fork von mindcraft-bots/mindcraft auf GitHub (Upstream-Verlauf, aber Voice/Server/Doku liegen außerhalb von `mindcraft/`); Git-Submodul (für Laien zu fummelig); eigenes Template-Profil statt Miku als Vorlage (doppelte Pflege).
 **VERWORFEN:** `eula.txt` mitliefern – der Freund muss die Mojang-EULA selbst akzeptieren. Privates Arbeitsprotokoll (LOG/PROGRESS/CLAUDE.md) veröffentlichen – persönlich, für Mitspieler nutzlos.
+
+## 2026-11-07 – Echtes Sehen: gezielte Blicke statt Dauer-Video
+**Gewählt:** Einzelne Screenshots mit konkreter Frage bei Anlässen (Zuruf, alle 2 min, fertiger Spieler-Bau, eigener Bau) – weil billig (~1 s, Gemini Flash-Lite) und jede Antwort direkt nutzbar ist.
+**Alternativen:** Dauernd alle X Sekunden Bild ins Prompt (teuer, langsam, Kontext voll); nur Text-Stats (sieht keine Formen/Ästhetik).
+**Bewusst:** Bilder ohne Chatverlauf schicken (kürzer, keine Rollenspiel-Antworten vom Vision-Modell); Bau des Spielers nur über „Arm geschwungen + nah dran“ zuordnen (sonst zählen Wasser/Sand/Pflanzen).
+
+## 2026-11-07 – Nachfolger: eigene Fabric-Server-Mod als „Körper“ (GEPLANT, nach Live-Test)
+**Gewählt:** Miku als Fake Player in einer Fabric-Server-Mod statt mineflayer – weil Desync (F-005), Wegfindung (F-011/F-012/F-025/F-042) und Versions-Rückstand (F-001/F-010/F-041) aus mineflayer kommen. Gehirn (Node: LLM, Innenleben, Gedächtnis), Stimme (Fish) und STT (Whisper) werden übernommen. LLM per echtem Tool-Calling statt `!befehle`/JS-Code. Stimme positional über Simple-Voice-Chat-API.
+**Vision im Nachfolger:** (2) strukturiertes Sehen aus Server-Blockdaten (Bauen, Selbstkontrolle, Umgebung) + (3) echte Screenshots über kleine Client-Mod beim Spieler („schau mal“, Bauten bewerten). prismarine-viewer entfällt.
+**Organisation (Nutzerwunsch):** eigenes neues GitHub-Repo, eigener neuer Projektordner, eigene neue Claude-Session – NICHT in diesem Repo/Ordner.
+**Alternativen:** mineflayer behalten (reicht evtl., falls Live-Test gut läuft); Baritone (nur Client-seitig, nicht auf Server nutzbar → eigene Wegfindung nötig).
+**Reihenfolge:** erst Live-Test dieses Projekts, dann Nachfolger starten.
