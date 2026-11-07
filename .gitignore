@@ -1,0 +1,22 @@
+# Minecraft-Server: nur Startskript + Einstellungen teilen (server.jar = Mojang, Welt = privat)
+server/*
+!server/start-server.bat
+!server/server.properties
+
+# persönlich / Laufzeit
+companion.json
+mindcraft/keys.json
+mindcraft/bots/*/
+mindcraft/bots/gemini_embeddings_cache.json
+skins/
+*.log
+__pycache__/
+node_modules/
+
+# privates Arbeitsprotokoll (Doku für Mitspieler: README.md, AGENT_SETUP.md, docs/ANLEITUNG.md, docs/FEHLER.md)
+CLAUDE.md
+PROGRESS.md
+docs/LOG.md
+docs/log-archiv/
+docs/superpowers/
+.mindcraft-upstream.git/

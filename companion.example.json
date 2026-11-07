@@ -1,0 +1,8 @@
+{
+  "player": "Steve",
+  "profile": "profiles/miku.json",
+  "misheard_names": ["Miko", "Mico", "Meeku"],
+  "extra_words": ["Teto"],
+  "hotkey": "v",
+  "mic": null
+}

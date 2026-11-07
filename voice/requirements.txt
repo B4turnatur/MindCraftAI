@@ -1,0 +1,8 @@
+keyboard
+numpy
+requests
+sounddevice
+python-socketio[client]
+faster-whisper
+nvidia-cublas-cu12
+nvidia-cudnn-cu12==9.*
