@@ -41,6 +41,20 @@
 **Wofür:** Charakter, Sprache, Länge der Antworten, KI-Modell.
 **So geht's:** In `mindcraft/profiles/miku.json` → `conversing` (Text) bzw. `model` (`claude-cli/sonnet` = schlau, `claude-cli/haiku` = schneller, `claude-cli/opus` = am schlausten aber langsam; mit API-Key alternativ `claude-sonnet-5-5`). Mit Denk-Stufe als Objekt: `{"api":"claude-cli","model":"sonnet","params":{"effort":"high"}}` (low/medium/high). **Aktuell:** `claude-cli/haiku` (spart Limit). Für eine andere Figur: Datei kopieren, `name` ändern und in `companion.json` → `profile` eintragen (Schritt für Schritt: `AGENT_SETUP.md`).
 
+## Eigener Charakter & GitHub
+**Wofür:** Einen anderen Charakter als Miku einbauen bzw. das Projekt mit Freunden teilen.
+**Voraussetzungen:** eingerichtetes Projekt (siehe oben); für GitHub: `gh` angemeldet.
+**So geht's:**
+1. Charakter: `mindcraft/profiles/miku.json` kopieren, `name` (= Minecraft-Name des Bots, 3–16 Zeichen `A-Z a-z 0-9 _`), die Absätze erster Satz / `PERSONALITY:` / `LORE ...` in `conversing` und `speak_model` ändern, dann in `companion.json` → `profile` eintragen. Komplette Anleitung: `AGENT_SETUP.md` Schritt 5.
+2. Teilen: Repo https://github.com/B4turnatur/MindCraftAI (öffentlich). Freund klont es und sagt seinem KI-Agenten „Lies AGENT_SETUP.md und richte das Projekt für mich ein.“
+3. Änderungen hochladen:
+    git add -A
+    git commit -m "was geändert"
+    git push
+**Nicht im Repo (gitignored):** `companion.json`, `mindcraft/keys.json`, `mindcraft/bots/*/` (Gedächtnis), Embedding-Cache, Welt, `server.jar`, `eula.txt`, Skins, Logs, `CLAUDE.md`, `PROGRESS.md`, `docs/LOG.md`, `docs/superpowers/`. Der Mindcraft-Upstream-Git liegt in `.mindcraft-upstream.git/` (Basis `e1c1fc3`).
+**Typische Fehler:** Bot-Name mit Leerzeichen/Umlaut → Bot kann nicht joinen; `settings.js` wirft `ENOENT ... profiles/x.json` → `profile`-Pfad in `companion.json` falsch (relativ zu `mindcraft/`).
+**Im Code:** `mindcraft/settings.js` (Kopf: lädt `companion`), `voice/ptt.py` (Kopf: `CFG`, `PLAYER`, `AGENT`, `MISHEARD`, `EXTRA_WORDS`), `mindcraft/src/utils/text.js` → `_getWords()`.
+
 ## Miku-Skin (CustomSkinLoader)
 **Wofür:** Damit Miku im Spiel wie Miku aussieht statt wie Steve/Alex (Server ist offline-mode → keine Skins). Nur bei dir sichtbar.
 **Voraussetzungen:** Modrinth-Instanz „Fabulously Optimized (6)“ (FO 13.6.0, MC 26.1.2) mit `mods/CustomSkinLoader_Universal-15.1.jar` (von Modrinth, sha512 geprüft).
